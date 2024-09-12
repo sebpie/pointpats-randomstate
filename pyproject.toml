@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 
 [project]
-name = "pointpats"
-dynamic = ["version"]
+name = "pointpats-seeded"
+version = "2.5.0"
 authors = [
     { name = "Serge Rey", email = "sjsrey@gmail.com" },
     { name = "Hu Shao", email = "shaohutiger@gmail.com" },
