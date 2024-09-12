@@ -160,7 +160,7 @@ def poisson(hull, intensity=None, size=None, seed: int | numpy.random.BitGenerat
     return result.squeeze()
 
 
-def normal(hull, center=None, cov=None, size=None):
+def normal(hull, center=None, cov=None, size=None, seed: int | numpy.random.BitGenerator | None=None):
     """
     Simulate a multivariate random normal point cluster
 
@@ -185,13 +185,18 @@ def normal(hull, center=None, cov=None, size=None):
         of points to simulate in each replication and the second number is the number of
         total replications. So, (10, 4) indicates 10 points, 4 times.
         If an integer is provided, n_replications is assumed to be 1.
-
+    seed : int
+        the seed to be used for initialising numpy RandomState.
+    
     Returns
     --------
         :   numpy.ndarray
         either an (n_replications, n_observations, 2) or (n_observations,2) array containing
         the simulated realizations.
     """
+
+    random_state = numpy.random.RandomState(seed)
+
     if isinstance(hull, numpy.ndarray):
         if hull.shape == (4,):
             hull = hull
@@ -241,7 +246,7 @@ def normal(hull, center=None, cov=None, size=None):
         replication_cor = (1 / replication_sd) * replication_cov * (1 / replication_sd)
 
         while i_observation < n_observations:
-            candidate = numpy.random.multivariate_normal((0, 0), replication_cor)
+            candidate = random_state.multivariate_normal((0, 0), replication_cor)
             x, y = center + candidate * replication_sd
             if _contains(hull, x, y):
                 result[i_replication, i_observation] = (x, y)
@@ -251,6 +256,7 @@ def normal(hull, center=None, cov=None, size=None):
 
 def cluster_poisson(
     hull, intensity=None, size=None, n_seeds=2, cluster_radius=None,
+    seed: int | numpy.random.BitGenerator | None=None
 ):
     """
     Simulate a cluster poisson random point process with a specified intensity & number of seeds.
@@ -283,6 +289,8 @@ def cluster_poisson(
         If an array, then there must be the same number of radii as clusters.
         If None, 50% of the minimum inter-point distance is used, which may fluctuate across
         replications.
+    seed : int, array or BitGenerator
+        the seed to be used for initialising numpy RandomState.
 
     Returns
     --------
@@ -290,6 +298,9 @@ def cluster_poisson(
         either an (n_replications, n_observations, 2) or (n_observations,2) array containing
         the simulated realizations.
     """
+
+    random_state = numpy.random.RandomState(seed)
+
     if isinstance(hull, numpy.ndarray):
         if hull.shape == (4,):
             hull = hull
@@ -339,7 +350,7 @@ def cluster_poisson(
     return result.squeeze()
 
 
-def cluster_normal(hull, cov=None, size=None, n_seeds=2):
+def cluster_normal(hull, cov=None, size=None, n_seeds=2, seed: int | numpy.random.BitGenerator | None=None):
     """
     Simulate a cluster poisson random point process with a specified intensity & number of seeds.
     A cluster poisson process is a poisson process where the center of each "cluster" is
@@ -366,6 +377,8 @@ def cluster_normal(hull, cov=None, size=None, n_seeds=2):
         and the number of observations is computed from the intensity.
     n_seeds : int
         the number of sub-clusters to use.
+    seed : int, array or BitGenerator
+        the random state or seed to be used for initialising numpy RandomState.
 
     Returns
     --------
@@ -373,6 +386,8 @@ def cluster_normal(hull, cov=None, size=None, n_seeds=2):
         either an (n_replications, n_observations, 2) or (n_observations,2) array containing
         the simulated realizations.
     """
+    random_state = numpy.random.RandomState(seed)
+
     if isinstance(hull, numpy.ndarray):
         if hull.shape == (4,):
             hull = hull
@@ -383,7 +398,7 @@ def cluster_normal(hull, cov=None, size=None, n_seeds=2):
     )
     result = numpy.empty((n_simulations, n_observations, 2))
     for i_replication in range(n_simulations):
-        seeds = poisson(hull, size=(n_seeds, n_simulations))
+        seeds = poisson(hull, size=(n_seeds, n_simulations), seed=random_state)
         if cov is None:
             cov = spatial.distance.pdist(seeds).mean() ** 2
         clusters = numpy.array_split(result[i_replication], n_seeds)
@@ -405,7 +420,7 @@ def cluster_normal(hull, cov=None, size=None, n_seeds=2):
     return result.squeeze()
 
 
-def _uniform_circle(n, radius=1.0, center=(0.0, 0.0), burn=2, verbose=False, hull=None):
+def _uniform_circle(n, radius=1.0, center=(0.0, 0.0), burn=2, verbose=False, hull=None, random_state: int | numpy.random.BitGenerator | None=None):
     """
     Generate n points within a circle of given radius.
 
@@ -420,13 +435,17 @@ def _uniform_circle(n, radius=1.0, center=(0.0, 0.0), burn=2, verbose=False, hul
     burn : int
         number of coordinates to simulate at a time. This is the "chunk"
         size sent to numpy.random.uniform each iteration of the rejection sampler
-
+    random_state : numpy.random.BitGenerator
+        the random state to be used in the function
+    
     Returns
     -------
       : array
         (n, 2), coordinates of generated points
 
     """
+
+    random_state = numpy.random.RandomState(random_state)
 
     good = numpy.zeros((n, 2), float)
     c = 0
@@ -435,8 +454,8 @@ def _uniform_circle(n, radius=1.0, center=(0.0, 0.0), burn=2, verbose=False, hul
     r2 = r * r
     it = 0
     while c < n:
-        x = numpy.random.uniform(-r, r, (burn * n, 1))
-        y = numpy.random.uniform(-r, r, (burn * n, 1))
+        x = random_state.uniform(-r, r, (burn * n, 1))
+        y = random_state.uniform(-r, r, (burn * n, 1))
         if hull is None:
             in_hull = True
         else:
