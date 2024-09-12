@@ -99,7 +99,7 @@ def parse_size_and_intensity(hull, intensity=None, size=None):
 # ------------------------------------------------------------ #
 
 
-def poisson(hull, intensity=None, size=None):
+def poisson(hull, intensity=None, size=None, seed: int | numpy.random.BitGenerator | None=None):
     """
     Simulate a poisson random point process with a specified intensity.
 
@@ -122,6 +122,8 @@ def poisson(hull, intensity=None, size=None):
         If an integer is provided and intensity is None, n_replications is assumed to be 1.
         If size is an integer and intensity is also provided, then size indicates n_replications,
         and the number of observations is computed from the intensity.
+    seed : int
+        the seed to be used for initialising numpy RandomState.
 
     Returns
     --------
@@ -138,6 +140,8 @@ def poisson(hull, intensity=None, size=None):
         hull, intensity=intensity, size=size
     )
 
+    random_state = numpy.random.RandomState(seed)
+
     result = numpy.empty((n_simulations, n_observations, 2))
 
     bbox = _bbox(hull)
@@ -147,8 +151,8 @@ def poisson(hull, intensity=None, size=None):
         i_observation = 0
         while i_observation < n_observations:
             x, y = (
-                numpy.random.uniform(bbox[0], bbox[2]),
-                numpy.random.uniform(bbox[1], bbox[3]),
+                random_state.uniform(bbox[0], bbox[2]),
+                random_state.uniform(bbox[1], bbox[3]),
             )
             if _contains(hull, x, y):
                 result[i_replication, i_observation] = (x, y)
